@@ -65,6 +65,9 @@ services:
   spark-client:
     container_name: spark-driver
     image: bitnami/spark:3.5.1
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - CASSANDRA_HOST=cassandra
     volumes:
       - ./:/app
     ports:

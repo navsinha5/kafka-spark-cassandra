@@ -5,7 +5,8 @@ import os
 
 
 KAFKA_TOPIC = 'payment_msg'
-KAFKA_SERVER = os.environ.get('KAFKA_SERVER', 'kafka:9092')
+KAFKA_BROKER = os.environ.get('KAFKA_BROKER', 'localhost:29092')
+CASSANDRA_HOST = os.environ.get('CASSANDRA_HOST', 'localhost')
 PROVINCES = ('BH', 'MP', 'UP', 'DL', 'UK', 'JH', 'AP')
 
 
@@ -41,7 +42,7 @@ def to_province(provinceId):
 # configure kafka as data stream source
 df_payment_source = spark.readStream \
                         .format('kafka') \
-                        .option('kafka.bootstrap.servers', KAFKA_SERVER) \
+                        .option('kafka.bootstrap.servers', KAFKA_BROKER) \
                         .option('startingOffsets', 'latest') \
                         .option('subscribe', KAFKA_TOPIC) \
                         .load()
@@ -73,6 +74,7 @@ query_cassandra = df_payment_processed.select('provinceId', 'province', 'total')
                 .writeStream \
                 .format("org.apache.spark.sql.cassandra") \
                 .outputMode('complete') \
+                .option('spark.cassandra.connection.host', CASSANDRA_HOST) \
                 .options(keyspace="test", table='sink') \
                 .option('confirm.truncate', True) \
                 .option('checkpointLocation', '/tmp/checkpoint') \
