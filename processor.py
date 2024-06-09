@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, sum, window, from_json, udf
+from pyspark.sql.functions import col, sum, window, from_json, udf, round
 from pyspark.sql.types import *
 import os
 
@@ -13,6 +13,8 @@ PROVINCES = ('BH', 'MP', 'UP', 'DL', 'UK', 'JH', 'AP')
 # create spark session
 spark = SparkSession.Builder() \
                     .appName('processor') \
+                    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+                    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
                     .getOrCreate()
 
 
@@ -38,7 +40,6 @@ def to_province(provinceId):
         return PROVINCES[provinceId]
 
 
-
 # configure kafka as data stream source
 df_payment_source = spark.readStream \
                         .format('kafka') \
@@ -58,29 +59,42 @@ df_payment_source = df_payment_source \
 
 # process data
 df_payment_processed = df_payment_source \
+                            .withWatermark('createTime', '10 second') \
                             .groupBy(
-                                window(df_payment_source['createTime'], '1 minute'),
+                                window(col('createTime'), '1 minute'),
                                 'provinceId') \
-                            .agg(sum('payAmount').alias('total')) \
-                            .withColumn('province', to_province(df_payment_source['provinceId']))
+                            .agg(round(sum('payAmount'), 2).alias('total')) \
+                            .withColumn('province', to_province(col('provinceId')))
 
 
+# write to console
 query_console = df_payment_processed.writeStream \
                     .format('console') \
-                    .outputMode('complete') \
+                    .outputMode('update') \
                     .start()
 
+
+# write to Cassandra
 query_cassandra = df_payment_processed.select('provinceId', 'province', 'total') \
                 .writeStream \
                 .format("org.apache.spark.sql.cassandra") \
                 .outputMode('complete') \
                 .option('spark.cassandra.connection.host', CASSANDRA_HOST) \
-                .options(keyspace="test", table='sink') \
+                .options(keyspace="province", table='pay_amount') \
                 .option('confirm.truncate', True) \
                 .option('checkpointLocation', '/tmp/checkpoint') \
                 .start()
 
 
+# write to delta table
+query_delta = df_payment_processed.writeStream \
+                    .format('delta') \
+                    .outputMode('append') \
+                    .option('checkpointLocation', '/tmp/delta/province/pay_amount/_checkpoint') \
+                    .start('/tmp/delta/province/pay_amount')
+
+
 query_console.awaitTermination()
 query_cassandra.awaitTermination()
+query_delta.awaitTermination()
 

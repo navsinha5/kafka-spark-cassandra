@@ -3,6 +3,7 @@ version: "2"
 services:
 
   zookeeper:
+    container_name: zookeeper
     image: confluentinc/cp-zookeeper:latest
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -12,6 +13,7 @@ services:
   
 
   kafka:
+    container_name: kafka
     image: confluentinc/cp-kafka:latest
     depends_on:
       - zookeeper
@@ -24,15 +26,21 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - /tmp/data/kafka:/var/lib/kafka/data
 
 
   cassandra:
+    container_name: cassandra
     image: cassandra:latest
     ports:
       - "9042:9042"
+    volumes:
+      - /tmp/data/cassandra:/var/lib/cassandra
 
   
   spark-master:
+    container_name: spark-master
     image: bitnami/spark:3.5.1
     environment:
       - SPARK_MODE=master
@@ -47,6 +55,7 @@ services:
 
   
   spark-worker:
+    container_name: spark-worker
     image: bitnami/spark:3.5.1
     environment:
       - SPARK_MODE=worker
@@ -58,11 +67,13 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
       - SPARK_USER=spark
+    volumes:
+      - /tmp/data/delta:/tmp/delta
     ports:
       - '8081:8081'
 
 
-  spark-client:
+  spark-driver:
     container_name: spark-driver
     image: bitnami/spark:3.5.1
     environment:
@@ -70,5 +81,6 @@ services:
       - CASSANDRA_HOST=cassandra
     volumes:
       - ./:/app
+      - /tmp/data/delta:/tmp/delta
     ports:
       - '4040:4040'
