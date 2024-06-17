@@ -2,8 +2,8 @@
 ## Step 1
 Boot up the cluster  
 ```bash
-$ mkdir -p /tmp/data/kafka /tmp/data/cassandra /tmp/data/delta
-$ chown 1001 /tmp/data/delta
+$ mkdir -p /var/tmp/data/kafka /var/tmp/data/cassandra /var/tmp/data/delta /var/tmp/data/derby
+$ sudo chown 1001 /var/tmp/data/delta
 $ sudo docker compose up
 ```
 
@@ -50,5 +50,6 @@ io.delta:delta-spark_2.12:3.2.0 \
 $ $SPARK_HOME/bin/spark-sql --master local --packages io.delta:delta-spark_2.12:3.2.0 \
 --conf "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension" \
 --conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
-spark-sql> SELECT * FROM delta.`/tmp/data/delta/province/pay_amount`;
+spark-sql> SELECT * FROM delta.`/tmp/delta/province/pay_amount`;
+spark-sql> SELECT * FROM delta.`/var/tmp/data/delta/province/pay_amount`;
 ```

@@ -27,7 +27,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
-      - /tmp/data/kafka:/var/lib/kafka/data
+      - /var/tmp/data/kafka:/var/lib/kafka/data
 
 
   cassandra:
@@ -36,7 +36,7 @@ services:
     ports:
       - "9042:9042"
     volumes:
-      - /tmp/data/cassandra:/var/lib/cassandra
+      - /var/tmp/data/cassandra:/var/lib/cassandra
 
   
   spark-master:
@@ -68,7 +68,7 @@ services:
       - SPARK_SSL_ENABLED=no
       - SPARK_USER=spark
     volumes:
-      - /tmp/data/delta:/tmp/delta
+      - /var/tmp/data/delta:/tmp/delta
     ports:
       - '8081:8081'
 
@@ -81,6 +81,6 @@ services:
       - CASSANDRA_HOST=cassandra
     volumes:
       - ./:/app
-      - /tmp/data/delta:/tmp/delta
+      - /var/tmp/data/delta:/tmp/delta
     ports:
       - '4040:4040'
